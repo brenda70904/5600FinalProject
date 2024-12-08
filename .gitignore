@@ -1,0 +1,4 @@
+# ignore disk, filesys, compiled stuff
+*.o
+DISK
+filesys
