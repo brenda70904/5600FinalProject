@@ -23,6 +23,31 @@ void FileSys::unmount() {
 // make a directory
 void FileSys::mkdir(const char *name)
 {
+  // val directory name
+  if (strlen(name) == 0 || strlen(name) > MAX_FNAME_SIZE) {
+    cerr << "Error: Invalid directory name given." << endl;
+    return;
+  }
+
+  // check: directory exists
+  dirblock_t curr_d_block;
+  bfs.read_block(curr_dir, (void*) & curr_d_block);
+
+  for (int i = 0; i < new_dir.num_entries; i++) {
+    if (curr_dir[i].name == name) {
+      cerr << "Error: directory already exists." << endl;
+      return;
+    }
+  }
+
+  // find new block
+  short new_d_block = bfs.get_free_block();
+  if (new_d_block == 0) {
+    cerr << "Error: disk is full." << endl;
+    return;
+  }
+
+
 }
 
 // switch to a directory
@@ -75,4 +100,13 @@ void FileSys::stat(const char *name)
 }
 
 // HELPER FUNCTIONS (optional)
+bool is_directory(short block_num) {
+  dirblock_t block;
+  bfs.read_block(block_num, (void*) &block);
+
+  if (block.magic == DIR_MAGIC_NUM) {
+    return true;
+  }
+  return false;
+}
 
