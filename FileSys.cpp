@@ -24,8 +24,8 @@ void FileSys::unmount() {
 void FileSys::mkdir(const char *name)
 {
   // validate directory name
-  if (strlen(name) == 0 || strlen(name) > MAX_FNAME_SIZE) {
-    cerr << "Error: Invalid directory name given." << endl;
+  if (strlen(name) > MAX_FNAME_SIZE) {
+    cerr << "Error: File name is too long." << endl;
     return;
   }
 
@@ -35,14 +35,14 @@ void FileSys::mkdir(const char *name)
 
   for (int i = 0; i < curr_d_block.num_entries; i++) {
     if (strcmp(name, curr_d_block.dir_entries[i].name) == 0) {
-      cerr << "Error: Directory already exists." << endl;
+      cerr << "Error: Directory exists." << endl;
       return;
     }
   }
 
   // check if curr dir has space for new dir
   if (curr_d_block.num_entries == MAX_DIR_ENTRIES) {
-    cerr << "Error: Maximum number of directory entries reached." << endl;
+    cerr << "Error: Directory is full." << endl;
     return;
   }
 
@@ -77,13 +77,21 @@ void FileSys::cd(const char *name)
   dirblock_t curr_dir_block;    // get curr dir block
   bfs.read_block(curr_dir, (void*) &curr_dir_block);
 
+
   for (int i = 0; i < curr_dir_block.num_entries; i++) {  // iterate thru dir entries
     if (strcmp(curr_dir_block.dir_entries[i].name, name) == 0) {    // dir name matches
-      curr_dir = curr_dir_block.dir_entries[i].block_num;
-      return;
+      short new_block = curr_dir_block.dir_entries[i].block_num;
+      
+      if (!is_directory(new_block)) {   // not dir
+        cerr << "File is not a directory." << endl;
+      }
+       else {   // match & is directory
+        curr_dir = new_block;
+        return;
+      }
     }
   }
-  cerr << "Error: Directory " <<  name << " not found." << endl;
+  cerr << "Error: File does not exist." << endl;
 }
 
 // switch to home directory
