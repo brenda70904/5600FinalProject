@@ -99,6 +99,19 @@ void FileSys::rmdir(const char *name)
 // list the contents of current directory
 void FileSys::ls()
 {
+  dirblock_t curr_dir_block;  // get curr dir block
+  bfs.read_block(curr_dir, (void*) &curr_dir_block);
+
+  for (int i = 0; i < curr_dir_block.num_entries; i++) {
+    short block = curr_dir_block.dir_entries[i].block_num;
+    cout << curr_dir_block.dir_entries[i].name;
+    if (is_directory(block)) {  // if is directory, append '/'
+      cout << '/' << endl;
+    }
+    else {  // regular file, no appending
+      cout << endl;
+    }
+  }
 }
 
 // create an empty data file
