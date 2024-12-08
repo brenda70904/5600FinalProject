@@ -182,25 +182,36 @@ void FileSys::stat(const char *name)
 }
 
 // HELPER FUNCTIONS (optional)
+
+/**
+ * @brief checks if given block num correlates to dir
+ * @param block_num - given block num
+ * @return true/false 
+ */
 bool FileSys::is_directory(short block_num) {
   dirblock_t block;
   bfs.read_block(block_num, (void*) &block);
 
-  if (block.magic == DIR_MAGIC_NUM) {
+  if (block.magic == DIR_MAGIC_NUM) {   // check w/ magic num
     return true;
   }
   return false;
 }
 
+/**
+ * @brief Helper method to remove an entry at the given index from the curr
+ * dir's entry array
+ * @param index - index whose entry will be removed
+ */
 void FileSys:: remove_helper(int index) {
   dirblock_t curr_dir_block;
   bfs.read_block(curr_dir, (void*) &curr_dir_block);
 
-  for (int i = index; i < curr_dir_block.num_entries; i++) {
+  for (int i = index; i < curr_dir_block.num_entries; i++) {    // cycle & replace
     curr_dir_block.dir_entries[i] = curr_dir_block.dir_entries[i + 1];
   }
 
-  curr_dir_block.dir_entries[curr_dir_block.num_entries - 1].block_num = 0;
-  curr_dir_block.num_entries --;
-  bfs.write_block(curr_dir, (void*) & curr_dir_block);
+  curr_dir_block.dir_entries[curr_dir_block.num_entries - 1].block_num = 0;   // mark as empty
+  curr_dir_block.num_entries --;    
+  bfs.write_block(curr_dir, (void*) & curr_dir_block);    // write back to disk
 }
