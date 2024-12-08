@@ -83,7 +83,7 @@ void FileSys::cd(const char *name)
       short new_block = curr_dir_block.dir_entries[i].block_num;
       
       if (!is_directory(new_block)) {   // not dir
-        cerr << "File is not a directory." << endl;
+        cerr << "Error: File is not a directory." << endl;
       }
        else {   // match & is directory
         curr_dir = new_block;
@@ -102,6 +102,35 @@ void FileSys::home() {
 // remove a directory
 void FileSys::rmdir(const char *name)
 {
+  dirblock_t curr_dir_block;    // get curr dir block
+  bfs.read_block(curr_dir, (void*) &curr_dir_block);
+
+  for (int i = 0; i < curr_dir_block.num_entries; i++) {
+    if (strcmp(name, curr_dir_block.dir_entries[i].name) == 0) {
+      short find_block = curr_dir_block.dir_entries[i].block_num;
+
+
+      if (!is_directory(find_block)) {   // not dir
+          cerr << "Error: File is not a directory." << endl;
+      }
+      
+      else {
+        dirblock_t dir_to_remove;
+        bfs.read_block(find_block, (void*) &dir_to_remove);
+
+        if (dir_to_remove.num_entries != 0) {
+          cerr << "Error: Directory is not empty." << endl;
+          return;
+        }
+
+        bfs.reclaim_block(find_block);
+
+        remove_helper(i);
+        return;
+      }
+    }
+  }
+  cerr << "Error: File does not exist." << endl;
 }
 
 // list the contents of current directory
@@ -163,3 +192,15 @@ bool FileSys::is_directory(short block_num) {
   return false;
 }
 
+void FileSys:: remove_helper(int index) {
+  dirblock_t curr_dir_block;
+  bfs.read_block(curr_dir, (void*) &curr_dir_block);
+
+  for (int i = index; i < curr_dir_block.num_entries; i++) {
+    curr_dir_block.dir_entries[i] = curr_dir_block.dir_entries[i + 1];
+  }
+
+  curr_dir_block.dir_entries[curr_dir_block.num_entries - 1].block_num = 0;
+  curr_dir_block.num_entries --;
+  bfs.write_block(curr_dir, (void*) & curr_dir_block);
+}

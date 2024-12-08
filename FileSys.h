@@ -56,6 +56,8 @@ class FileSys {
     short HOME_DIR = 1; // home dir
 
     bool is_directory(short block_num);   // checks if block is directory
+
+    void remove_helper(int index);
 };
 
 #endif 
