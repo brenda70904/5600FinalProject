@@ -53,6 +53,7 @@ class FileSys {
     short curr_dir;	// current directory
 
     // Additional private variables and Helper functions - if desired
+    short HOME_DIR = 1; // home dir
 
     bool is_directory(short block_num);   // checks if block is directory
 };
