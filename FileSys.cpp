@@ -35,8 +35,10 @@ void FileSys::mkdir(const char *name)
 
   for (int i = 0; i < curr_d_block.num_entries; i++) {
     if (strcmp(name, curr_d_block.dir_entries[i].name) == 0) {
-      cerr << "Error: Directory exists." << endl;
-      return;
+      if (is_directory(curr_d_block.dir_entries[i].block_num)) {
+        cerr << "Error: Directory exists." << endl;
+        return;
+      }
     }
   }
 
