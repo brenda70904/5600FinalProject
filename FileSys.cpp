@@ -210,14 +210,108 @@ void FileSys::create(const char *name)
 // append data to a data file
 void FileSys::append(const char *name, const char *data)
 {
+  dirblock_t curr_dir_block;  // get curr dir block
+  bfs.read_block(curr_dir, &curr_dir_block);
 
+  // find the inode block number
+  short inode_block = 0;
+  for (int i = 0; i < curr_dir_block.num_entries; i++) {
+    if (strcmp(curr_dir_block.dir_entries[i].name, name) == 0) {
+      inode_block = curr_dir_block.dir_entries[i].block_num;
+      break;
+    }
+  }
 
+  // check: file does not exist
+  if (inode_block == 0) {
+    cerr << "Error: File does not exist." << endl;
+    return;
+  }
 
+  // check: it is a dir, not a file
+  if (is_directory(inode_block)) {
+    cerr << "Error: File is a directory." << endl;
+    return;
+  }
+
+  // read the inode block
+  inode_t inode;
+  bfs.read_block(inode_block, &inode);
+
+  // get the size of the data
+  unsigned int data_size = strlen(data);
+  if (inode.size + data_size > MAX_FILE_SIZE) {
+    cerr << "Error: Append exceeds maximum file size." << endl;
+    return;
+  }
+
+  unsigned int bytes_remaining = data_size;
+  unsigned int bytes_written = 0;
+
+  // determine last block
+  int last_block_index = inode.size / BLOCK_SIZE;
+  int used_last_block = inode.size % BLOCK_SIZE;
+
+  // use the last block if it exists and has space
+  if (used_last_block > 0) {
+    short last_block_num = inode.blocks[last_block_index];
+    datablock_t last_block;
+    bfs.read_block(last_block_num, &last_block);
+
+    unsigned int space_last_block = BLOCK_SIZE - used_last_block;
+    unsigned int bytes_to_write = min(space_last_block, bytes_remaining);
+
+    // copy characters one-by-one into the last block
+    for (unsigned int i = 0; i < bytes_to_write; i++) {
+      last_block.data[used_last_block + i] = data[bytes_written + i];
+    }
+
+    // update the block to disk
+    bfs.write_block(last_block_num, &last_block);
+
+    bytes_remaining -= bytes_to_write;
+    bytes_written += bytes_to_write;
+    inode.size += bytes_to_write;
+  }
+
+  // allocate new blocks for remaining data
+  while (bytes_remaining > 0) {
+    // find new block num
+    short new_block_num = bfs.get_free_block();
+    if (new_block_num == 0) {
+      cerr << "Error: Disk is full." << endl;
+      return;
+    }
+
+    // init new datablock
+    datablock_t new_block;
+    unsigned int bytes_to_write = min((unsigned int) BLOCK_SIZE, bytes_remaining);
+
+    // copy characters one-by-one into the new block
+    for (unsigned int i = 0; i < bytes_to_write; i++) {
+      new_block.data[i] = data[bytes_written + i];
+    }
+
+    // update new block to disk
+    bfs.write_block(new_block_num, &new_block);
+
+    // add new block to inode
+    inode.blocks[last_block_index] = new_block_num;
+
+    bytes_remaining -= bytes_to_write;
+    bytes_written += bytes_to_write;
+    inode.size += bytes_to_write;
+    last_block_index++;
+  }
+
+  // write the updated inode to disk
+  bfs.write_block(inode_block, &inode);
 }
 
 // display the contents of a data file
 void FileSys::cat(const char *name)
 {
+
 }
 
 // display the last N bytes of the file
