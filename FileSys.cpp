@@ -311,7 +311,56 @@ void FileSys::append(const char *name, const char *data)
 // display the contents of a data file
 void FileSys::cat(const char *name)
 {
+  dirblock_t curr_dir_block;
+  bfs.read_block(curr_dir, &curr_dir_block);
 
+  // find the inode block number
+  short inode_block = 0;
+  for (int i = 0; i < curr_dir_block.num_entries; i++) {
+    if (strcmp(curr_dir_block.dir_entries[i].name, name) == 0) {
+      inode_block = curr_dir_block.dir_entries[i].block_num;
+      break;
+    }
+  }
+
+  // check: file does not exist
+  if (inode_block == 0) {
+    cerr << "Error: File does not exist." << endl;
+    return;
+  }
+
+  // check: it is a dir, not a file
+  if (is_directory(inode_block)) {
+    cerr << "Error: File is a directory." << endl;
+    return;
+  }
+
+  // read the inode block
+  inode_t inode;
+  bfs.read_block(inode_block, &inode);
+
+  unsigned int bytes_remaining = inode.size;
+
+  // print the content in blocks
+  for (int i = 0; i < MAX_DATA_BLOCKS && bytes_remaining > 0; i++) {
+    if (inode.blocks[i] == 0) {
+      break;
+    }
+
+    datablock_t data_block;
+    bfs.read_block(inode.blocks[i], &data_block);
+
+    // determine how many bytes to print from this block
+    unsigned int bytes_to_print = min(bytes_remaining, (unsigned int) BLOCK_SIZE);
+    for (unsigned int j = 0; j < bytes_to_print; j++) {
+      cout << data_block.data[j];
+    }
+
+    bytes_remaining -= bytes_to_print;
+  }
+
+  // add a new line in the end
+  cout << endl;
 }
 
 // display the last N bytes of the file
