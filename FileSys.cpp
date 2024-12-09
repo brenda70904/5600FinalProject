@@ -84,6 +84,7 @@ void FileSys::cd(const char *name)
       
       if (!is_directory(new_block)) {   // not dir
         cerr << "Error: File is not a directory." << endl;
+        return;
       }
        else {   // match & is directory
         curr_dir = new_block;
@@ -112,6 +113,7 @@ void FileSys::rmdir(const char *name)
 
       if (!is_directory(find_block)) {   // not dir
           cerr << "Error: File is not a directory." << endl;
+          return;
       }
       
       else {
@@ -154,11 +156,63 @@ void FileSys::ls()
 // create an empty data file
 void FileSys::create(const char *name)
 {
+  // validate directory name
+  if (strlen(name) > MAX_FNAME_SIZE) {
+    cerr << "Error: File name is too long." << endl;
+    return;
+  }
+
+  // check: file exists
+  dirblock_t curr_dir_block;
+  bfs.read_block(curr_dir, (void*) &curr_dir_block);
+
+  for (int i = 0; i < curr_dir_block.num_entries; i++) {
+    if (strcmp(curr_dir_block.dir_entries[i].name, name) == 0) {
+        cerr << "Error: File exists." << endl;
+        return;
+    }
+  }
+
+  // check if curr dir has space for new dir
+  if (curr_dir_block.num_entries >= MAX_DIR_ENTRIES) {
+    cerr << "Error: Directory is full." << endl;
+    return;
+  }
+
+  // find a free block
+  short new_block_num = bfs.get_free_block();
+  if (new_block_num == 0) {
+      cerr << "Error: Disk is full." << endl;
+      return;
+  }
+
+  // init new inode block
+  inode_t new_inode;
+  new_inode.magic = INODE_MAGIC_NUM;
+  new_inode.size = 0;
+  for (int i = 0; i < MAX_DATA_BLOCKS; i++) {
+      new_inode.blocks[i] = 0;
+  }
+
+  // write new file(inode) to disk
+  bfs.write_block(new_block_num, (void*) &new_inode);
+
+  // add new file to curr dir
+  int index = curr_dir_block.num_entries;
+  strcpy(curr_dir_block.dir_entries[index].name, name);
+  curr_dir_block.dir_entries[index].block_num = new_block_num;
+  curr_dir_block.num_entries++;
+
+  // update curr dir to disk
+  bfs.write_block(curr_dir, (void*) &curr_dir_block);
 }
 
 // append data to a data file
 void FileSys::append(const char *name, const char *data)
 {
+
+
+
 }
 
 // display the contents of a data file
