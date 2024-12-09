@@ -376,6 +376,49 @@ void FileSys::rm(const char *name)
 // display stats about file or directory
 void FileSys::stat(const char *name)
 {
+// read the current directory block
+dirblock_t curr_dir_block;
+bfs.read_block(curr_dir, (void*) &curr_dir_block);
+
+//search for the entry
+for(int i = 0; i < curr_dir_block.num_entries; ++i){
+  if(strcmp(curr_dir_block.dir_entries[i].name, name)==0){
+    short block_num = curr_dir_block.dir_entries[i].block_num;
+    //check if it's a dir
+    if(is_directory(block_num)){
+      //read and display dir stats
+      dirblock_t dir_block;
+      bfs.read_block(block_num, (void*)&dir_block);
+
+      cout << "Directory Name: " << name << "/" << endl;
+      cout << "Directory block: " << block_num << endl;
+
+      return;
+    }else{
+      // read and display file stats
+      inode_t inode_block;
+      bfs.read_block(block_num, (void*)&inode_block);
+
+      cout << "Inode block: " << block_num << endl;
+      cout << "Bytes in file: " << inode_block.size << endl;
+
+      // count num of blocks used
+      int block_count = 1;
+      for (int j =0; j < MAX_DATA_BLOCKS; ++j){
+        if(inode_block.blocks[j] != 0){
+          block_count ++;
+        }
+      }
+      cout << "Number of blocks: " << block_count << endl;
+      cout << "First block: " << (inode_block.blocks[0] != 0 ? inode_block.blocks[0] : 0) << endl;
+      return;
+    }
+  }
+}
+// File or directory not found
+cerr << "Error: File does not exist." << endl;
+
+
 }
 
 // HELPER FUNCTIONS (optional)
