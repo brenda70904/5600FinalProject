@@ -1,0 +1,26 @@
+mkdir file1 
+mkdir file1
+mkdir file2
+ls
+cd file1
+create test1
+cd test1
+create test1
+append test1 HelloWorld
+stat file1
+stat test1
+stat test2
+home
+stat file1
+stat file3
+cat file1
+cd file1
+cat test1
+rm test1
+rm test2
+home
+rmdir file1
+rmdir file3
+rmdir file2
+exit 
+quit
