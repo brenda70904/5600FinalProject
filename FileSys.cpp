@@ -373,6 +373,54 @@ void FileSys::tail(const char *name, unsigned int n)
 // delete a data file
 void FileSys::rm(const char *name)
 {
+  dirblock_t curr_dir_block;
+  bfs.read_block(curr_dir, &curr_dir_block);
+
+  //locate the file in the current directory
+  int entry_idx = -1;
+  short inode_block = 0;
+
+  for(int i = 0; i < curr_dir_block.num_entries; i++){
+    if(strcmp(curr_dir_block.dir_entries[i].name,name) == 0){
+      entry_idx = i;
+      inode_block = curr_dir_block.dir_entries[i].block_num;
+      break;
+    }
+  }
+    if(entry_idx == -1){
+      cerr << "Error: File deos not exist." << endl;
+      return;
+    }
+
+    // check if the entry is a directory
+    if(is_directory(inode_block)){
+      cerr << "Error: File is a directory." << endl;
+      return;
+    }
+
+    // read the inode block
+    inode_t inode;
+    bfs.read_block(inode_block, &inode);
+
+    //reclaim all data blocks
+    for(int i = 0; i < MAX_DATA_BLOCKS; i++){
+      if(inode.blocks[i] != 0){
+        bfs.reclaim_block(inode.blocks[i]);
+      }
+    }
+
+    //reclaim the inode block 
+    bfs.reclaim_block(inode_block);
+
+    // remove the file entry from the directory
+    for(int i = entry_idx; i < curr_dir_block.num_entries -1; i++){
+      curr_dir_block.dir_entries[i] = curr_dir_block.dir_entries[i+1];
+    }
+
+    curr_dir_block.num_entries --;
+    bfs.write_block(curr_dir, &curr_dir_block);
+
+    cout << "File '" << name << "' removed successfully." << endl;
 }
 
 // display stats about file or directory
