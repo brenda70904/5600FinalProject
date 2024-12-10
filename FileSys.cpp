@@ -274,10 +274,17 @@ void FileSys::append(const char *name, const char *data)
     bytes_remaining -= bytes_to_write;
     bytes_written += bytes_to_write;
     inode.size += bytes_to_write;
+
+    last_block_index++;
   }
 
   // allocate new blocks for remaining data
   while (bytes_remaining > 0) {
+    if (last_block_index >= MAX_DATA_BLOCKS) {
+      cerr << "Error: Exceeded maximum number of data blocks." << endl;
+      return;
+    }
+
     // find new block num
     short new_block_num = bfs.get_free_block();
     if (new_block_num == 0) {
@@ -303,6 +310,7 @@ void FileSys::append(const char *name, const char *data)
     bytes_remaining -= bytes_to_write;
     bytes_written += bytes_to_write;
     inode.size += bytes_to_write;
+    
     last_block_index++;
   }
 
@@ -368,6 +376,67 @@ void FileSys::cat(const char *name)
 // display the last N bytes of the file
 void FileSys::tail(const char *name, unsigned int n)
 {
+  dirblock_t curr_dir_block;
+  bfs.read_block(curr_dir, &curr_dir_block);
+
+  // find the inode block number
+  short inode_block = 0;
+  for (int i = 0; i < curr_dir_block.num_entries; i++) {
+    if (strcmp(curr_dir_block.dir_entries[i].name, name) == 0) {
+      inode_block = curr_dir_block.dir_entries[i].block_num;
+      break;
+    }
+  }
+
+  // check: file does not exist
+  if (inode_block == 0) {
+    cerr << "Error: File does not exist." << endl;
+    return;
+  }
+
+  // check: it is a dir, not a file
+  if (is_directory(inode_block)) {
+    cerr << "Error: File is a directory." << endl;
+    return;
+  }
+
+  // read the inode block
+  inode_t inode;
+  bfs.read_block(inode_block, &inode);
+
+  // determine start position of display
+  unsigned int start = (n >= inode.size) ? 0 : inode.size - n;
+
+  unsigned int start_block_index = start / BLOCK_SIZE;
+  unsigned int offset_start_block = start % BLOCK_SIZE;
+
+  unsigned int bytes_remaining = n;
+  // If n >= file size, display the whole file
+  if (n > inode.size) {
+    bytes_remaining = inode.size;
+  }
+
+  for (int i = start_block_index; i < MAX_DATA_BLOCKS && bytes_remaining > 0; i++) {
+    if (inode.blocks[i] == 0) {
+      break;
+    }
+
+    datablock_t data_block;
+    bfs.read_block(inode.blocks[i], &data_block);
+
+    // determine where to start and how many bytes to print from this block
+    unsigned int offset = (i == start_block_index) ? offset_start_block : 0;
+    unsigned int bytes_to_print = min(BLOCK_SIZE - offset, bytes_remaining);
+
+    for (unsigned int j = 0; j < bytes_to_print; j++) {
+      cout << data_block.data[offset + j];
+    }
+
+    bytes_remaining -= bytes_to_print;
+  }
+
+  // add a new line in the end
+  cout << endl;
 }
 
 // delete a data file
