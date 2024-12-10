@@ -482,12 +482,7 @@ void FileSys::rm(const char *name)
     bfs.reclaim_block(inode_block);
 
     // remove the file entry from the directory
-    for(int i = entry_idx; i < curr_dir_block.num_entries -1; i++){
-      curr_dir_block.dir_entries[i] = curr_dir_block.dir_entries[i+1];
-    }
-
-    curr_dir_block.num_entries --;
-    bfs.write_block(curr_dir, &curr_dir_block);
+    remove_helper(entry_idx);
 
     cout << "File '" << name << "' removed successfully." << endl;
 }
